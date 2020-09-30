@@ -1,0 +1,43 @@
+---
+title: "Data_Generation"
+author: "Søren Orm Hansen"
+date: "9/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Defining variables
+
+# Learning rates
+a <- c(0.001, 0.01, 0.1, 0.2, 0.5)
+
+n_guesses <- 100
+
+mean_guesses <- 30
+
+sd_guesses <- 10
+
+start_guess <- 10
+
+event <- rnorm(n_guesses, mean_guesses, sd_guesses)
+
+guesses <- rep(0,n_guesses)
+
+guesses[1] <- start_guess
+
+for(i in 1:100) {
+  guess = guesses[i - 1] + LR * PE
+}
+
+
+
+```
+
+
+
+
