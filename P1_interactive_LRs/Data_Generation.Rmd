@@ -7,6 +7,10 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+
+p_load(tidyverse, ggplot2)
 ```
 
 
@@ -16,15 +20,19 @@ knitr::opts_chunk$set(echo = TRUE)
 # Learning rates
 ntrials <- 100
 
-EV <- matrix(0, ncol = 3, nrow = ntrials) %>% data.frame()
+a <- c(.001, .01, .1)
+
+EV <- matrix(0, ncol = 2, nrow = ntrials * length(a)) %>% data.frame()
 
 x <- rnorm(ntrials, 30, 10)
 
-a <- c(.001, .01, .1)
+for(i in 1:length(a)){
+  EV[1 + (i-1)*100, 1] <- 10
+}
 
-EV[1,] <- 10
 
 EV$Trials <- 1:ntrials
+
 
 for (i in 1:length(a)) {
   for (t in 2:ntrials) {
