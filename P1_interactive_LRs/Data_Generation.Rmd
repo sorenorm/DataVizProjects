@@ -14,27 +14,33 @@ knitr::opts_chunk$set(echo = TRUE)
 # Defining variables
 
 # Learning rates
-a <- c(0.001, 0.01, 0.1, 0.2, 0.5)
+ntrials <- 100
 
-n_guesses <- 100
+EV <- matrix(0, ncol = 3, nrow = ntrials) %>% data.frame()
 
-mean_guesses <- 30
+x <- rnorm(ntrials, 30, 10)
 
-sd_guesses <- 10
+a <- c(.001, .01, .1)
 
-start_guess <- 10
+EV[1,] <- 10
 
-event <- rnorm(n_guesses, mean_guesses, sd_guesses)
+EV$Trials <- 1:ntrials
 
-guesses <- rep(0,n_guesses)
-
-guesses[1] <- start_guess
-
-for(i in 1:100) {
-  guess = guesses[i - 1] + LR * PE
+for (i in 1:length(a)) {
+  for (t in 2:ntrials) {
+    EV[t, i] <- EV[t - 1, i] + a[i] * (x[t] - EV[t - 1, i])
+  }
+  colnames(EV)[i] <- paste('LR', a[i], sep = '_')
 }
 
 
+EV %>% 
+  ggplot(aes(x = 1:ntrials, y = LR_0.1)) + 
+  geom_line() + 
+  xlab('Trial') +
+  theme_minimal()
+
+#plot(EV, type = 'l', xlab = 'trials')
 
 ```
 
