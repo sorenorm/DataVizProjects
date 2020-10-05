@@ -1,44 +1,80 @@
 ---
-title: 'Our World in Data: Crop Yields'
+title: 'Interactive Illustration of Learning Rates'
 runtime: shiny
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE)
+#knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
 
 ```{r}
-library(dplyr)
+#library(dplyr)
 library(ggplot2)
-library(forcats)
+#library(forcats)
 library(shiny)
-library(stringr)
+library(tidyverse)
 library(plotly)
 theme_set(theme_light())
-# Data cleaning and processing
-yields_tidy <- readRDS("yields_tidy.rds")
-top_crops <- yields_tidy %>%
-  count(crop, sort = TRUE) %>%
-  head(9) %>%
-  pull(crop)
+# # Data cleaning and processing
+# yields_tidy <- readRDS("yields_tidy.rds")
+# top_crops <- yields_tidy %>%
+#   count(crop, sort = TRUE) %>%
+#   head(9) %>%
+#   pull(crop)
 ```
 
 ```{r}
-plot_yields <- function(tbl, facet_scales = "fixed") {
-  g <- tbl %>%
-    mutate(crop = fct_reorder(crop, -yield)) %>%
-    mutate(entity = fct_reorder(entity, -yield)) %>%
-    ggplot(aes(year, yield, color = entity)) +
-    geom_line() +
-    expand_limits(y = 0) +
-    facet_wrap(~ crop, scales = facet_scales) +
-    labs(x = "Year",
-         y = "Yield (tonnes per hectare)",
-         title = "Crop yields over time",
-         color = "Country")
+plot_lr <- function(ntrials, start, end, sd, lr) {
+  # Defining variables
+  # ntrials <- ntrials # Number of trials
+  # start <- start # Start guess
+  # end <- end # True value
+  # sd <- sd # Standard deviation
+  # lr <- lr # Learning rates
+
+  # Useful calculation
+  len <- as.numeric(length(lr))
+
+  # Making the dataframe
+  EV <- matrix(0, ncol = 2, nrow = ntrials * len)  %>% data.frame()
+  colnames(EV)[1] <- 'LR'
+  colnames(EV)[2] <- 'EV'
+
+  x <- rnorm(ntrials, end, sd)
+
+  for (i in 1:len){
+    EV[1 + (i - 1) * ntrials, 2] <- start
   
-  ggplotly(g)
+    EV[1 + (i - 1) * ntrials, 1] <- paste('LR', lr[i], sep = '_')
+  }
+
+
+  EV$Trials <- 1:ntrials
+
+
+  for (i in 1:len) {
+    for (t in 2:ntrials) {
+      tx <- t
+      t <- t + (i - 1) * ntrials
+    
+      EV[t, 1] <- paste('LR', lr[i], sep = '_')
+    
+      EV[t, 2] <- EV[t - 1, 2] + lr[i] * (x[tx] - EV[t - 1, 2])
+    }
+    tx <- 2
+  }
+
+  g <- EV %>% 
+   ggplot(aes(x = Trials, y = EV, color = LR)) +
+   geom_line() +
+    xlab('Trial') +
+    facet_wrap(~ LR) +
+    geom_hline(aes(yintercept = end), linetype = 'dotted', alpha = 0.5) +
+    theme_classic()
+  
+  return(g)
 }
 # yields_tidy %>%
 #   filter(code %in% c("USA", "IND")) %>%
@@ -48,27 +84,45 @@ plot_yields <- function(tbl, facet_scales = "fixed") {
 
 ```{r eruptions, echo=FALSE}
 inputPanel(
-  selectInput("entity",
-              label = "Country/Continent/Region:",
-              choices = unique(yields_tidy$entity),
-              selected = c("United States", "India"),
+  selectInput("num_trials",
+              label = "Number of Trials:",
+              choices = seq(100,1000,10),
+              selected = 100,
               selectize = TRUE,
-              multiple = TRUE),
-  selectInput("crop",
-              label = "Crops:",
-              choices = unique(yields_tidy$crop),
-              selected = top_crops,
+              multiple = FALSE),
+  selectInput("start_guess",
+              label = "Start Guess:",
+              choices = seq(10,1000,10),
+              selected = 30,
               selectize = TRUE,
-              multiple = TRUE),
-  radioButtons("facet_scales",
-               label = "",
-               choices = c("Free y-axis" = "free_y",
-                           "Shared y-axis" = "fixed"))
+              multiple = FALSE),
+  selectInput("end_guess",
+              label = "Value for Guessing:",
+              choices = seq(10,1000,10),
+              selected = 30,
+              selectize = TRUE,
+              multiple = FALSE),
+  selectInput("stand_divi",
+              label = "Standard deviation:",
+              choices = seq(10,100,5),
+              selected = 10,
+              selectize = TRUE,
+              multiple = FALSE),
+  selectInput("learn",
+              label = "Learning Rate:",
+              choices = seq(0,1,0.0001),
+              selected = 0.1,
+              selectize = TRUE,
+              multiple = TRUE)
+  # radioButtons("facet_scales",
+  #              label = "",
+  #              choices = c("Free y-axis" = "free_y",
+  #                          "Shared y-axis" = "fixed"))
 )
 renderPlotly({
-  yields_tidy %>%
-    filter(entity %in% input$entity,
-           crop %in% input$crop) %>%
-    plot_yields(facet_scales = input$facet_scales)
+  input %>% plot_lr(ntrials = num_trials, start = start_guess, end = end_guess, sd = stand_divi, lr = learn)
+  # yields_tidy %>%
+  #   filter(entity %in% input$entity,
+  #          crop %in% input$crop) %>%
+  #   plot_yields(facet_scales = input$facet_scales)
 })
-

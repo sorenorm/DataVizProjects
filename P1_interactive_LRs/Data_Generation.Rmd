@@ -16,42 +16,56 @@ p_load(tidyverse, ggplot2)
 
 ```{r}
 # Defining variables
+ntrials <- 200 # Number of trials
+start <- 10 # Start guess
+end <- 70 # True value
+sd <- 10 # Standard deviation
+lr <- c(.2, .01, .03, 0.05) # Learning rates
 
-# Learning rates
-ntrials <- 100
+# Useful calculation
+len <- as.numeric(length(lr))
 
-a <- c(.001, .01, .1)
+# Making the dataframe
+EV <- matrix(0, ncol = 2, nrow = ntrials * len)  %>% data.frame()
+colnames(EV)[1] <- 'LR'
+colnames(EV)[2] <- 'EV'
 
-EV <- matrix(0, ncol = 2, nrow = ntrials * length(a)) %>% data.frame()
+x <- rnorm(ntrials, end, sd)
 
-x <- rnorm(ntrials, 30, 10)
-
-for(i in 1:length(a)){
-  EV[1 + (i-1)*100, 1] <- 10
+for (i in 1:len){
+  EV[1 + (i - 1) * ntrials, 2] <- start
+  
+  EV[1 + (i - 1) * ntrials, 1] <- paste('LR', lr[i], sep = '_')
 }
 
 
 EV$Trials <- 1:ntrials
 
 
-for (i in 1:length(a)) {
+for (i in 1:len) {
   for (t in 2:ntrials) {
-    EV[t, i] <- EV[t - 1, i] + a[i] * (x[t] - EV[t - 1, i])
+    tx <- t
+    t <- t + (i - 1) * ntrials
+    
+    EV[t, 1] <- paste('LR', lr[i], sep = '_')
+    
+    EV[t, 2] <- EV[t - 1, 2] + lr[i] * (x[tx] - EV[t - 1, 2])
   }
-  colnames(EV)[i] <- paste('LR', a[i], sep = '_')
+  tx <- 2
 }
 
+#EV$LR <- as.factor(EV$LR)
 
 EV %>% 
-  ggplot(aes(x = 1:ntrials, y = LR_0.1)) + 
-  geom_line() + 
+  ggplot(aes(x = Trials, y = EV, color = LR)) +
+  geom_line() +
   xlab('Trial') +
-  theme_minimal()
+  facet_wrap(~ LR) +
+  geom_hline(aes(yintercept = end), linetype = 'dotted', alpha = 0.5) +
+  theme_classic()
 
 #plot(EV, type = 'l', xlab = 'trials')
 
 ```
-
-
 
 
