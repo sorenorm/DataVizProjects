@@ -72,13 +72,11 @@ plot_lr <- function(ntrials, start, end, sd, lr) {
     xlab('Trial') +
     facet_wrap(~ LR) +
     geom_hline(aes(yintercept = end), linetype = 'dotted', alpha = 0.5) +
-    theme_classic()
+    theme_classic() %>% ggplotly()
   
   return(g)
 }
-# yields_tidy %>%
-#   filter(code %in% c("USA", "IND")) %>%
-#   plot_yields()
+
 ```
 
 
@@ -111,7 +109,7 @@ inputPanel(
   selectInput("learn",
               label = "Learning Rate:",
               choices = seq(0,1,0.0001),
-              selected = 0.1,
+              selected = c(0.1, 0.01, 0.001),
               selectize = TRUE,
               multiple = TRUE)
   # radioButtons("facet_scales",
@@ -120,7 +118,11 @@ inputPanel(
   #                          "Shared y-axis" = "fixed"))
 )
 renderPlotly({
-  input %>% plot_lr(ntrials = num_trials, start = start_guess, end = end_guess, sd = stand_divi, lr = learn)
+    plot_lr(ntrials = input$num_trials, 
+            start = input$start_guess, 
+            end = input$end_guess, 
+            sd = input$stand_divi, 
+            lr = c(input$learn))
   # yields_tidy %>%
   #   filter(entity %in% input$entity,
   #          crop %in% input$crop) %>%

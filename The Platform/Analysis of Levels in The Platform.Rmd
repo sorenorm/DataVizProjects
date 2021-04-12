@@ -1,0 +1,255 @@
+---
+title: "Untitled"
+author: "Ormo"
+date: "4/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+pacman::p_load(rethinking, brms, tidyverse, ggthemes)
+
+theme_set(theme_minimal())
+```
+
+
+```{r}
+# The Platform data
+
+levels <- c(72,26,78,43,11,79,32,8,132,48,171,33,202,6)
+
+(nlevels <- length(levels))
+
+(mean.levels <- mean(levels))
+
+(sd.levels <- sd(levels))
+
+df <- data.frame(levels = levels,
+                 time = 1:nlevels)
+
+df %>% 
+  ggplot(aes(x = time, y = levels)) +
+  geom_point(color = 'firebrick',
+             shape = 1,
+             size = 2.5,
+             stroke = 1) +
+  geom_line(alpha = .3) + 
+  scale_x_continuous(breaks = 1:nlevels) +
+  scale_y_reverse()
+
+df %>%
+  ggplot(aes(x = levels, y = ..density..)) +
+  geom_histogram(binwidth = 30,
+                 fill = 'lightblue',
+                 color = 'black') +
+  geom_vline(xintercept = mean.levels, 
+             color = 'firebrick',
+             size = 1)
+  xlab('Observed levels in movie')
+
+df %>%
+  ggplot(aes(x = levels, y = ..density..)) +
+  geom_density(kernel = "cosine") +
+    geom_vline(xintercept = mean.levels, 
+             color = 'firebrick',
+             size = 1) +
+  xlab('Observed levels in movie')
+
+
+dens(levels)
+
+hist(levels)
+```
+
+```{r}
+# Critique of the large distance between the levels in the movie
+n <- 1e5
+
+random.draws <- round(replicate(n, runif( n = nlevels, min = 1, max = 333)), 0)
+
+step.size.all <- NULL
+
+for(i in 1:n){
+  step.size <- NULL
+  for(j in 1:(nlevels - 1)){
+    step.size <- c(step.size, random.draws[j, i] - random.draws[j + 1, i])
+  }
+  step.size.all <- c(step.size.all, mean(abs(step.size)))
+}
+
+step.size <- NULL
+
+for (j in 1:(nlevels - 1)) {
+  step.size <-
+    c(step.size, levels[j] - levels[j + 1])
+}
+
+mean(abs(step.size))
+
+changes.all <- NULL
+
+for(i in 1:n) {
+  changes <- 0
+  for (j in 3:nlevels) {
+    direction1 <- ifelse(random.draws[j - 2, i] > random.draws[j - 1, i], -1, 1)
+    direction2 <- ifelse(random.draws[j - 1, i] > random.draws[j, i], -1, 1)
+    changes <- ifelse(direction1 == direction2, changes, changes + 1)
+  }
+  changes.all <- c(changes.all, changes)
+}
+mean(changes.all)
+
+changes <- 0
+
+for (j in 3:nlevels) {
+  direction1 <-
+    ifelse(levels[j - 2] > levels[j - 1],-1, 1)
+  direction2 <-
+    ifelse(levels[j - 1] > levels[j],-1, 1)
+  changes <-
+    ifelse(direction1 == direction2, changes, changes +1)
+}
+
+means <- NULL
+sds <- NULL
+for(i in 1:n){
+  means = c(means, mean(random.draws[,i]))
+  sds =c(sds, sd(random.draws[,i]))
+}
+```
+
+
+```{r}
+d <- data.frame(means = means, 
+                sds = sds,
+                step.size.all = step.size.all,
+                changes.all = changes.all)
+
+d %>%
+  ggplot(aes(x = step.size.all, y = ..density..)) +
+  geom_histogram(binwidth = 1,
+                 fill = 'lightblue',
+                 color = 'black') +
+  geom_vline(xintercept = step.size %>% abs() %>% mean() %>% round(0), color = 'firebrick') +
+  annotate(geom = "text",
+    x = step.size %>% abs() %>% mean() %>% round(0) - 25,
+    y = 0.02,
+    angle = 0,
+    label = 'Mean dist. in movie') +
+  xlab('Average Distance Between Levels')
+
+d %>%
+  ggplot(aes(x = changes.all, y = ..density..)) +
+  geom_histogram(binwidth = 1,
+                 fill = 'lightblue',
+                 color = 'black') +
+  geom_vline(xintercept = changes, color = 'firebrick') +
+  annotate(geom = "text",
+    x = changes + .2,
+    y = 0.2,
+    angle = 270,
+    label = 'Changes in movie') +
+  xlab('Average Changes')
+
+d %>%
+  ggplot(aes(means, y = ..density..)) +
+  geom_histogram(binwidth = 1,
+                 fill = 'lightblue',
+                 color = 'black') +
+  geom_vline(xintercept = mean.levels, color = 'firebrick') +
+  annotate(geom = "text",
+    x = mean.levels + 24,
+    y = 0.01,
+    angle = 0,
+    label = 'Mean level in movie') +
+  xlab('Mean Levels')
+
+d %>% 
+  ggplot(aes(sds, y = ..density..)) +
+  geom_histogram(binwidth = 1,
+                 fill = 'lightblue',
+                 color = 'black') +
+  geom_vline(xintercept = sd.levels, color = 'firebrick') +
+  annotate(geom = "text",
+    x = sd.levels - 1.7,
+    y = 0.01,
+    angle = 90,
+    label = 'SD level in movie') +
+  xlab('SD Levels')
+
+d %>% ggplot() +
+  geom_point(aes(x = means, y = sds), 
+             shape = 1, 
+             alpha = 0.2,
+             color = 'darkblue') +
+  geom_point(aes(x=mean.levels, y = sd.levels), 
+             color = 'firebrick')
+
+d %>% ggplot() +
+  geom_point(aes(x = step.size.all, y = changes.all), 
+             shape = 1, 
+             alpha = 0.2,
+             color = 'darkblue') +
+  geom_point(aes(x = mean(abs(step.size)), y = changes), 
+             color = 'firebrick')
+  
+
+
+length(step.size.all[ step.size.all < mean(abs(step.size))])/length(step.size.all)
+
+length(changes.all[ changes.all > changes])/length(changes.all)
+
+length(means[ means < mean.levels])/length(means)
+
+length(sds[ sds < sd.levels])/length(sds)
+
+```
+
+
+```{r}
+# Approximation of max levels
+
+mean(step.size.all) * 3
+mean(abs(step.size)) * 3
+
+mean(means) * 2
+mean(mean.levels) * 2
+
+```
+
+## Modeling discrete uniform distributions
+### Method 1:
+The uniformly minimum variance unbiased (UMVU) estimator for the maximum is given by: 
+  UMVU = m + m/k - 1
+where m is the sample maximum and k is the sample size, sampling without replacement (the 'without replacement' criterion is potentially violated here).
+
+### Method 2:
+The maximum spacing estimation is given by
+
+
+```{r}
+# Method 1
+
+max(levels) + max(levels)/nlevels - 1
+
+# Method 2
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+

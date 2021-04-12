@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
 
-p_load(tidyverse, ggplot2)
+p_load(tidyverse, ggplot2, plotly)
 ```
 
 
@@ -56,13 +56,15 @@ for (i in 1:len) {
 
 #EV$LR <- as.factor(EV$LR)
 
-EV %>% 
+g <- EV %>% 
   ggplot(aes(x = Trials, y = EV, color = LR)) +
   geom_line() +
   xlab('Trial') +
   facet_wrap(~ LR) +
   geom_hline(aes(yintercept = end), linetype = 'dotted', alpha = 0.5) +
   theme_classic()
+
+ggplotly(g)
 
 #plot(EV, type = 'l', xlab = 'trials')
 
